@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException, status
 from sqlmodel import Session, select
 
-from app.database import get_session, init_db
+from app.database import get_db, init_db
 from app.models import Todo
 from app.schemas import TodoCreate, TodoUpdate
 from app.response import APIResponse
@@ -26,7 +26,7 @@ app: FastAPI = FastAPI(
 @app.get("/")
 async def root():
     return {
-        "message": "Welcome to dailyDo todo app",
+        "message": "Welcome to todo app",
         "data": None,
         "status": status.HTTP_200_OK,
     }
@@ -39,14 +39,14 @@ async def root():
 )
 async def create_todo(
     todo_data: TodoCreate,
-    session: Annotated[Session, Depends(get_session)],
+    db: Annotated[Session, Depends(get_db)],
 ):
     todo = Todo(
         content=todo_data.content,
     ) 
-    session.add(todo)
-    session.commit()
-    session.refresh(todo)
+    db.add(todo)
+    db.commit()
+    db.refresh(todo)
 
     return {
         "message": "Todo created successfully",
@@ -61,9 +61,9 @@ async def create_todo(
     status_code=status.HTTP_200_OK,
 )
 async def get_all(
-    session: Annotated[Session, Depends(get_session)],
+    db: Annotated[Session, Depends(get_db)],
 ):
-    todo_list = session.exec(
+    todo_list = db.exec(
         select(Todo)
     ).all()
 
@@ -81,9 +81,9 @@ async def get_all(
 )
 async def get_single_todo(
     id: str,
-    session: Annotated[Session, Depends(get_session)],
+    db: Annotated[Session, Depends(get_db)],
 ):
-    todo = session.exec(
+    todo = db.exec(
         select(Todo).where(Todo.id == id)
     ).first()
 
@@ -108,9 +108,9 @@ async def get_single_todo(
 async def edit_todo(
     id: str,
     todo: TodoUpdate,
-    session: Annotated[Session, Depends(get_session)],
+    db: Annotated[Session, Depends(get_db)],
 ):
-    updated_todo = session.exec(
+    updated_todo = db.exec(
         select(Todo).where(Todo.id == id)
     ).first()
 
@@ -123,9 +123,9 @@ async def edit_todo(
     updated_todo.content = todo.content
     updated_todo.is_completed = todo.is_completed
 
-    session.add(updated_todo)
-    session.commit()
-    session.refresh(updated_todo)
+    db.add(updated_todo)
+    db.commit()
+    db.refresh(updated_todo)
 
     return {
         "message": "Todo updated successfully",
@@ -141,9 +141,9 @@ async def edit_todo(
 )
 async def delete_todo(
     id: str,
-    session: Annotated[Session, Depends(get_session)],
+    db: Annotated[Session, Depends(get_db)],
 ):
-    deleted_todo = session.exec(
+    deleted_todo = db.exec(
         select(Todo).where(Todo.id == id)
     ).first()
 
@@ -153,8 +153,8 @@ async def delete_todo(
             detail="Todo not found",
         )
 
-    session.delete(deleted_todo)
-    session.commit()
+    db.delete(deleted_todo)
+    db.commit()
 
     return {
         "message": "Todo deleted successfully",
