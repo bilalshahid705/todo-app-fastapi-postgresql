@@ -3,7 +3,7 @@ from sqlmodel import SQLModel, Field
 from fastapi import Form
 from fastapi.security import OAuth2PasswordRequestForm
 from typing import Annotated
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, StringConstraints
 
 
 class Todo(SQLModel, table=True):
@@ -19,7 +19,27 @@ class User(SQLModel, table=True):
     email: str
     password: str
 
-class Register_User (BaseModel):
-    username: Annotated[str, Form()]
-    email: Annotated[str, Form()]
-    password: Annotated[str, Form()]
+class RegisterUser(BaseModel):
+    user_name: Annotated[
+        str,
+        StringConstraints(
+            min_length=3,
+            max_length=30,
+            strip_whitespace=True
+        ),
+        Form()
+    ]
+
+    email: Annotated[
+        EmailStr,
+        Form()
+    ]
+
+    password: Annotated[
+        str,
+        StringConstraints(
+            min_length=8,
+            max_length=128
+        ),
+        Form()
+    ]
