@@ -6,11 +6,7 @@ from fastapi import Depends, APIRouter, HTTPException, status
 from typing import Annotated
 from sqlmodel import Session, select
 
-router = APIRouter(
-    prefix="/users",
-    tags=["Users"],
-)
-
+router = APIRouter(tags=["todos"]) 
 
 @router.get("/")
 async def root():
