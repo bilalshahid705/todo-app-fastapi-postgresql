@@ -5,7 +5,7 @@ import pytest
 from sqlmodel import SQLModel, create_engine, Session
 from app.settings import settings
 from app.main import app
-from app.database import get_session
+from app.core.database import get_session
 
 test_database_url = str(settings.TEST_DATABASE_URL).replace("postgresql://", "postgresql+psycopg://", 1)
 

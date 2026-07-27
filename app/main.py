@@ -1,14 +1,10 @@
 from contextlib import asynccontextmanager
-from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, status
-from sqlmodel import Session, select
 
-from app.database import get_db, init_db
-from app.models import Todo
-from app.schemas import TodoCreate, TodoUpdate
-from app.response import APIResponse
-
+from app.api import api_router
+from app.core.database import init_db
+from fastapi.middleware.cors import CORSMiddleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -22,142 +18,13 @@ app: FastAPI = FastAPI(
     lifespan=lifespan,
 )
 
-
-@app.get("/")
-async def root():
-    return {
-        "message": "Welcome to todo app",
-        "data": None,
-        "status": status.HTTP_200_OK,
-    }
-
-
-@app.post(
-    "/todos/",
-    response_model=APIResponse[Todo],
-    status_code=status.HTTP_201_CREATED,
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://localhost:8000", "https://127.0.0.1:8000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
 )
-async def create_todo(
-    todo_data: TodoCreate,
-    db: Annotated[Session, Depends(get_db)],
-):
-    todo = Todo(
-        content=todo_data.content,
-    ) 
-    db.add(todo)
-    db.commit()
-    db.refresh(todo)
-
-    return {
-        "message": "Todo created successfully",
-        "data": todo,
-        "status": status.HTTP_201_CREATED,
-    }
 
 
-@app.get(
-    "/todos",
-    response_model=APIResponse[list[Todo]],
-    status_code=status.HTTP_200_OK,
-)
-async def get_all(
-    db: Annotated[Session, Depends(get_db)],
-):
-    todo_list = db.exec(
-        select(Todo)
-    ).all()
-
-    return {
-        "message": "Todos fetched successfully",
-        "data": todo_list,
-        "status": status.HTTP_200_OK,
-    }
-
-
-@app.get(
-    "/todos/{id}",
-    response_model=APIResponse[Todo],
-    status_code=status.HTTP_200_OK,
-)
-async def get_single_todo(
-    id: str,
-    db: Annotated[Session, Depends(get_db)],
-):
-    todo = db.exec(
-        select(Todo).where(Todo.id == id)
-    ).first()
-
-    if not todo:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Todo not found",
-        )
-
-    return {
-        "message": "Todo fetched successfully",
-        "data": todo,
-        "status": status.HTTP_200_OK,
-    }
-
-
-@app.put(
-    "/todos/{id}",
-    response_model=APIResponse[Todo],
-    status_code=status.HTTP_200_OK,
-)
-async def edit_todo(
-    id: str,
-    todo: TodoUpdate,
-    db: Annotated[Session, Depends(get_db)],
-):
-    updated_todo = db.exec(
-        select(Todo).where(Todo.id == id)
-    ).first()
-
-    if not updated_todo:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Todo not found",
-        )
-
-    updated_todo.content = todo.content
-    updated_todo.is_completed = todo.is_completed
-
-    db.add(updated_todo)
-    db.commit()
-    db.refresh(updated_todo)
-
-    return {
-        "message": "Todo updated successfully",
-        "data": updated_todo,
-        "status": status.HTTP_200_OK,
-    }
-
-
-@app.delete(
-    "/todos/{id}",
-    response_model=APIResponse[None],
-    status_code=status.HTTP_200_OK,
-)
-async def delete_todo(
-    id: str,
-    db: Annotated[Session, Depends(get_db)],
-):
-    deleted_todo = db.exec(
-        select(Todo).where(Todo.id == id)
-    ).first()
-
-    if not deleted_todo:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Todo not found",
-        )
-
-    db.delete(deleted_todo)
-    db.commit()
-
-    return {
-        "message": "Todo deleted successfully",
-        "data": None,
-        "status": status.HTTP_200_OK,
-    }
+app.include_router(api_router, prefix="/api/v1")
